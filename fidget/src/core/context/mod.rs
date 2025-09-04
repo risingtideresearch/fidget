@@ -999,6 +999,74 @@ impl Context {
         }
     }
 
+    /// Converts the entire context into a .vm file representation.
+    /// This representation is loosely defined and only intended for use in quick experiments.
+    ///
+    /// In particular, there is... not a great guarantee of correct ordering here?
+    /// Though it seems to work out.
+    pub fn to_text(&self) -> String {
+        let mut out = "".to_owned();
+        for node in self.ops.keys() {
+            let op = self.get_op(node).unwrap();
+
+            out += &format!("_{:x} ", node.get());
+            match op {
+                Op::Const(val) => {
+                    out += &format!("const {}", val)
+                },
+                Op::Input(var) => match var {
+                    Var::X => out += &format!("var-x"),
+                    Var::Y => out += &format!("var-y"),
+                    Var::Z => out += &format!("var-z"),
+                    Var::V(var_index) => out += &format!("var {:?}", var_index),
+                },
+                Op::Unary(op, arg) => {
+                    use UnaryOpcode::*;
+                    let arg = format!("_{:x}", arg.get());
+                    match op {
+                        Neg => out += &format!("neg {}", arg),
+                        Abs => out += &format!("abs {}", arg),
+                        Recip =>  out += &format!("recip {}", arg),
+                        Sqrt =>   out += &format!("sqrt {}", arg),
+                        Square => out += &format!("square {}", arg),
+                        Floor =>  out += &format!("floor {}", arg),
+                        Ceil =>   out += &format!("ceil {}", arg),
+                        Round =>  out += &format!("round {}", arg),
+                        Sin =>  out += &format!("sin {}", arg),
+                        Cos =>  out += &format!("cos {}", arg),
+                        Tan =>  out += &format!("tan {}", arg),
+                        Asin => out += &format!("asin {}", arg),
+                        Acos => out += &format!("acos {}", arg),
+                        Atan => out += &format!("atan {}", arg),
+                        Exp =>  out += &format!("exp {}", arg),
+                        Ln =>   out += &format!("ln {}", arg),
+                        Not =>  out += &format!("not {}", arg),
+                    }
+                },
+                Op::Binary(op, larg, rarg) => {
+                    use BinaryOpcode::*;
+                    let larg = format!("_{:x}", larg.get());
+                    let rarg = format!("_{:x}", rarg.get());
+                    match op {
+                        Add =>  out += &format!("add {} {}", larg, rarg),
+                        Sub =>  out += &format!("sub {} {}", larg, rarg),
+                        Mul =>  out += &format!("mul {} {}", larg, rarg),
+                        Div =>  out += &format!("div {} {}", larg, rarg),
+                        Atan => out += &format!("atan2 {} {}", larg, rarg),
+                        Min =>  out += &format!("min {} {}", larg, rarg),
+                        Max =>  out += &format!("max {} {}", larg, rarg),
+                        Compare => out += &format!("compare {} {}", larg, rarg),
+                        Mod =>  out += &format!("mod {} {}", larg, rarg),
+                        And =>  out += &format!("and {} {}", larg, rarg),
+                        Or =>   out += &format!("or {} {}", larg, rarg),
+                    }
+                },
+            }
+            out += "\n";
+        }
+        out
+    }
+
     /// Converts the entire context into a GraphViz drawing
     pub fn dot(&self) -> String {
         let mut out = "digraph mygraph{\n".to_owned();
