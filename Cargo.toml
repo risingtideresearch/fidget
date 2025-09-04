@@ -4,6 +4,7 @@ members = [
     "fidget",
     "demos/constraints",
     "demos/cli",
+    "demos/polymorph",
     "demos/viewer",
     "workspace-hack",
 ]
