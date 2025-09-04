@@ -1124,6 +1124,65 @@ impl Context {
         }
     }
 
+    /// Converts the given Node into an (inlined) Futhark function
+    pub fn futhark_inline(&self, i: Node, name: String) -> String {
+        format!("def {}(x: f64, y: f64, z: f64) = {}", name, self.futhark_inner_inline(i))
+    }
+
+    /// Converts the given node into a native Futhark expression
+    pub fn futhark_inner_inline(&self, i: Node) -> String {
+        let op = self.get_op(i).unwrap();
+        // dbg!(&op);
+        match op {
+            Op::Const(c) => format!("{c}"),
+            Op::Input(v) => v.to_string().to_lowercase(),
+            Op::Binary(op, l, r) => {
+                use BinaryOpcode::*;
+                match op {
+                    Add => format!("({} + {})", self.futhark_inner_inline(*l), self.futhark_inner_inline(*r)),
+                    Sub => format!("({} - {})", self.futhark_inner_inline(*l), self.futhark_inner_inline(*r)),
+                    Mul => format!("({} * {})", self.futhark_inner_inline(*l), self.futhark_inner_inline(*r)),
+                    Div => format!("({} / {})", self.futhark_inner_inline(*l), self.futhark_inner_inline(*r)),
+                    Atan => format!("(f64.atan2 {} {})",
+                        self.futhark_inner_inline(*l), self.futhark_inner_inline(*r)),
+                    Min => format!("(f64.min {} {})", // this thing
+                        self.futhark_inner_inline(*l), self.futhark_inner_inline(*r)),
+                    Max => format!("(f64.max {} {})",
+                        self.futhark_inner_inline(*l), self.futhark_inner_inline(*r)),
+                    Compare => format!("(let l = {} in let r = {} in if l < r then -1.0 else if l == r then 0.0 else if l > r then 1.0 else f64.nan)",
+                        self.futhark_inner_inline(*l), self.futhark_inner_inline(*r)),
+                    Mod => format!("({} % {})", self.futhark_inner_inline(*l), self.futhark_inner_inline(*r)),
+                    And => format!("(let l = {} in if l == 0.0 l else {})",
+                        self.futhark_inner_inline(*l), self.futhark_inner_inline(*r)),
+                    Or => format!("(let l = {} in if l != 0.0 l else {})",
+                        self.futhark_inner_inline(*l), self.futhark_inner_inline(*r)),
+                }
+            }
+            Op::Unary(op, arg) => {
+                use UnaryOpcode::*;
+                match op {
+                    Neg => format!("(f64.neg {})", self.futhark_inner_inline(*arg)),
+                    Abs => format!("(f64.abs {})", self.futhark_inner_inline(*arg)),
+                    Recip => format!("(1.0 / {})", self.futhark_inner_inline(*arg)),
+                    Sqrt => format!("(f64.sqrt {})", self.futhark_inner_inline(*arg)),
+                    Square => format!("({} ** 2)", self.futhark_inner_inline(*arg)),
+                    Floor => format!("(f64.floor {})", self.futhark_inner_inline(*arg)),
+                    Ceil => format!("(f64.ceil {})", self.futhark_inner_inline(*arg)),
+                    Round => format!("(f64.round {})", self.futhark_inner_inline(*arg)),
+                    Sin => format!("(f64.sin {})", self.futhark_inner_inline(*arg)),
+                    Cos => format!("(f64.cos {})", self.futhark_inner_inline(*arg)),
+                    Tan => format!("(f64.tan {})", self.futhark_inner_inline(*arg)),
+                    Asin => format!("(f64.asin {})", self.futhark_inner_inline(*arg)),
+                    Acos => format!("(f64.acos {})", self.futhark_inner_inline(*arg)),
+                    Atan => format!("(f64.atan {})", self.futhark_inner_inline(*arg)),
+                    Exp => format!("(f64.exp {})", self.futhark_inner_inline(*arg)),
+                    Ln => format!("(f64.log {})", self.futhark_inner_inline(*arg)),
+                    Not => format!("(if {} == 0.0 then 1.0 else 0.0)", self.futhark_inner_inline(*arg)),
+                }
+            }
+        }
+    }
+
     /// Converts the entire context into a GraphViz drawing
     pub fn dot(&self) -> String {
         let mut out = "digraph mygraph{\n".to_owned();
