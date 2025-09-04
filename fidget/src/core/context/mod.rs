@@ -1382,6 +1382,14 @@ impl Context {
         Ok(stack.pop().unwrap())
     }
 
+    /// Prunes the given Context to only the branches required by the provided root Node.
+    /// Returns a new Context and associated root Node.
+    pub fn prune(&self, n: Node) -> Result<(Context, Node), Error> {
+        let mut ctx = Context::new();
+        let node = ctx.import(&self.export(n)?);
+        Ok((ctx, node))
+    }
+
     /// Takes the symbolic derivative of a node with respect to a variable
     pub fn deriv(&mut self, n: Node, v: Var) -> Result<Node, Error> {
         if self.get_op(n).is_none() {
