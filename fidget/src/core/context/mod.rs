@@ -1067,6 +1067,63 @@ impl Context {
         out
     }
 
+    /// Converts the given Node into a Futhark function
+    pub fn futhark(&self, i: Node, name: String) -> String {
+        format!("def {}(x: f64, y: f64, z: f64) = {}", name, self.futhark_inner(i))
+    }
+
+    /// Converts the given node into a native Futhark expression
+    pub fn futhark_inner(&self, i: Node) -> String {
+        let op = self.get_op(i).unwrap();
+        match op {
+            Op::Const(c) => format!("{c}"),
+            Op::Input(v) => v.to_string().to_lowercase(),
+            Op::Binary(op, l, r) => {
+                use BinaryOpcode::*;
+                let op_str = match op {
+                    Add => "add",
+                    Sub => "sub",
+                    Mul => "mul",
+                    Div => "div",
+                    Atan => "atan2",
+                    Min => "min",
+                    Max => "max",
+                    Compare => "compare",
+                    Mod => "mod",
+                    And => "and",
+                    Or => "or",
+                };
+                let l_str = self.futhark_inner(*l);
+                let r_str = self.futhark_inner(*r);
+                format!("eval_binop(#{op_str}, {l_str}, {r_str})")
+            }
+            Op::Unary(op, arg) => {
+                use UnaryOpcode::*;
+                let op_str = match op {
+                    Neg => "neg",
+                    Abs => "abs",
+                    Recip => "recip",
+                    Sqrt => "sqrt",
+                    Square => "square",
+                    Floor => "floor",
+                    Ceil => "ceil",
+                    Round => "round",
+                    Sin => "sin",
+                    Cos => "cos",
+                    Tan => "tan",
+                    Asin => "asin",
+                    Acos => "acos",
+                    Atan => "atan",
+                    Exp => "exp",
+                    Ln => "ln",
+                    Not => "not",
+                };
+                let arg_str = self.futhark_inner(*arg);
+                format!("eval_unop(#{op_str}, {arg_str})")
+            }
+        }
+    }
+
     /// Converts the entire context into a GraphViz drawing
     pub fn dot(&self) -> String {
         let mut out = "digraph mygraph{\n".to_owned();
